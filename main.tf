@@ -37,7 +37,7 @@ data "aws_ami" "amazon_linux" {
 # --------
 
 resource "aws_security_group" "web_sg" {
-  name        = "web-ssh-sg"
+  name        = "iacm-web-ssh-sg"
   description = "Allow SSH and HTTP"
   vpc_id      = data.aws_vpc.default.id
 
