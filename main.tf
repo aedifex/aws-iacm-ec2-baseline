@@ -13,9 +13,18 @@ provider "aws" {
   region = "us-west-2"
 }
 
-# --------
-# Data
-# --------
+# -----------------------
+# Data Sources
+# -----------------------
+
+data "aws_vpc" "default" {
+  default = true
+}
+
+data "aws_subnet" "default" {
+  default_for_az    = true
+  availability_zone = "us-west-2a"
+}
 
 data "aws_ami" "amazon_linux" {
   most_recent = true
@@ -32,9 +41,9 @@ data "aws_ami" "amazon_linux" {
   }
 }
 
-# --------
-# Networking
-# --------
+# -----------------------
+# Security Group
+# -----------------------
 
 resource "aws_security_group" "web_sg" {
   name        = "iacm-web-ssh-sg"
@@ -46,7 +55,7 @@ resource "aws_security_group" "web_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # will be flagged by scanners
+    cidr_blocks = ["0.0.0.0/0"] # intentionally insecure for demo
   }
 
   ingress {
@@ -69,18 +78,9 @@ resource "aws_security_group" "web_sg" {
   }
 }
 
-data "aws_vpc" "default" {
-  default = true
-}
-
-data "aws_subnet" "default" {
-  default_for_az    = true
-  availability_zone = "us-west-2a"
-}
-
-# --------
-# EC2
-# --------
+# -----------------------
+# EC2 Instance
+# -----------------------
 
 resource "aws_instance" "web" {
   ami                    = data.aws_ami.amazon_linux.id
@@ -88,7 +88,7 @@ resource "aws_instance" "web" {
   subnet_id              = data.aws_subnet.default.id
   vpc_security_group_ids = [aws_security_group.web_sg.id]
 
-  key_name = "aws-iac-lab-usw2-ssh" # must already exist
+  key_name = "aws-iac-lab-usw2-ssh"
 
   associate_public_ip_address = true
 
@@ -96,28 +96,27 @@ resource "aws_instance" "web" {
 #!/bin/bash
 set -e
 
-# ---------------------------------
-# Base setup
-# ---------------------------------
+# -----------------------
+# Base Setup
+# -----------------------
+
 yum update -y
-yum install -y httpd figlet
+yum install -y httpd figlet curl
 
 systemctl enable httpd
 systemctl start httpd
 
 echo "Hello from Terraform EC2" > /var/www/html/index.html
 
-# ---------------------------------
-# Metadata
-# ---------------------------------
-INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
-REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
+# -----------------------
+# Harness Login Banner (AL2 correct method)
+# -----------------------
 
-# ---------------------------------
-# Harness MOTD Script (AL2 method)
-# ---------------------------------
-cat << 'SCRIPT' > /etc/update-motd.d/99-harness
+cat << 'BANNER' > /etc/profile.d/harness-banner.sh
 #!/bin/bash
+
+# Only show for interactive SSH sessions
+if [ -n "$PS1" ]; then
 
 INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
 REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
@@ -133,21 +132,22 @@ echo " Drift Status : NONE"
 echo " Instance ID  : $INSTANCE_ID"
 echo " Region       : $REGION"
 echo "----------------------------------------"
-SCRIPT
 
-chmod +x /etc/update-motd.d/99-harness
+fi
+BANNER
+
+chmod +x /etc/profile.d/harness-banner.sh
 
 EOF
-
 
   tags = {
     Name = "terraform-web"
   }
 }
 
-# --------
+# -----------------------
 # Outputs
-# --------
+# -----------------------
 
 output "instance_public_ip" {
   value = aws_instance.web.public_ip
