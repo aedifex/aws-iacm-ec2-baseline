@@ -93,33 +93,52 @@ resource "aws_instance" "web" {
   associate_public_ip_address = true
 
   user_data = <<-EOF
-              #!/bin/bash
-              yum update -y
-              yum install -y httpd
-              systemctl enable httpd
-              systemctl start httpd
-              echo "Hello from Terraform EC2" > /var/www/html/index.html
+#!/bin/bash
+set -e
 
-              # -----------------------------
-# Low-Key Deployment Reveal
-# -----------------------------
+# ---------------------------------
+# Base setup
+# ---------------------------------
+yum update -y
+yum install -y httpd figlet
+
+systemctl enable httpd
+systemctl start httpd
+
+echo "Hello from Terraform EC2" > /var/www/html/index.html
+
+# ---------------------------------
+# Metadata
+# ---------------------------------
+INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
+
+# ---------------------------------
+# Harness MOTD Script (AL2 method)
+# ---------------------------------
+cat << 'SCRIPT' > /etc/update-motd.d/99-harness
+#!/bin/bash
 
 INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
 REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
 
-BOOT_FILE="/etc/motd"
+figlet "Harness IACM"
 
-figlet "Harness IACM" > $BOOT_FILE
-echo "" >> $BOOT_FILE
-echo "----------------------------------------" >> $BOOT_FILE
-echo " Environment  : DEV" >> $BOOT_FILE
-echo " Policy Scan  : PASS" >> $BOOT_FILE
-echo " Violations   : 0" >> $BOOT_FILE
-echo " Drift Status : NONE" >> $BOOT_FILE
-echo " Instance ID  : $INSTANCE_ID" >> $BOOT_FILE
-echo " Region       : $REGION" >> $BOOT_FILE
-echo "----------------------------------------" >> $BOOT_FILE
-              EOF
+echo ""
+echo "----------------------------------------"
+echo " Environment  : DEV"
+echo " Policy Scan  : PASS"
+echo " Violations   : 0"
+echo " Drift Status : NONE"
+echo " Instance ID  : $INSTANCE_ID"
+echo " Region       : $REGION"
+echo "----------------------------------------"
+SCRIPT
+
+chmod +x /etc/update-motd.d/99-harness
+
+EOF
+
 
   tags = {
     Name = "terraform-web"
