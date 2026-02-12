@@ -101,6 +101,7 @@ set -e
 # -----------------------
 
 yum update -y
+amazon-linux-extras install epel -y
 yum install -y httpd figlet curl
 
 systemctl enable httpd
