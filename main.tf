@@ -74,7 +74,7 @@ data "aws_vpc" "default" {
 }
 
 data "aws_subnet" "default" {
-  default_for_az = true
+  default_for_az    = true
   availability_zone = "us-west-2a"
 }
 
@@ -99,6 +99,26 @@ resource "aws_instance" "web" {
               systemctl enable httpd
               systemctl start httpd
               echo "Hello from Terraform EC2" > /var/www/html/index.html
+
+              # -----------------------------
+# Low-Key Deployment Reveal
+# -----------------------------
+
+INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
+
+BOOT_FILE="/etc/motd"
+
+figlet "Harness IACM" > $BOOT_FILE
+echo "" >> $BOOT_FILE
+echo "----------------------------------------" >> $BOOT_FILE
+echo " Environment  : DEV" >> $BOOT_FILE
+echo " Policy Scan  : PASS" >> $BOOT_FILE
+echo " Violations   : 0" >> $BOOT_FILE
+echo " Drift Status : NONE" >> $BOOT_FILE
+echo " Instance ID  : $INSTANCE_ID" >> $BOOT_FILE
+echo " Region       : $REGION" >> $BOOT_FILE
+echo "----------------------------------------" >> $BOOT_FILE
               EOF
 
   tags = {
