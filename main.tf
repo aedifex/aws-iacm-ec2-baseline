@@ -142,7 +142,7 @@ chmod +x /etc/profile.d/harness-banner.sh
 EOF
 
   tags = {
-    Name = "terraform-web"
+    Name = "terraform-web-pr"
   }
 }
 
