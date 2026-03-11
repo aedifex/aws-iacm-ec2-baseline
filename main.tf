@@ -10,7 +10,7 @@ terraform {
 }
 
 provider "aws" {
-  region = "us-west-2"
+  region = "us-wst-2"
 }
 
 # -----------------------
@@ -142,7 +142,7 @@ chmod +x /etc/profile.d/harness-banner.sh
 EOF
 
   tags = {
-    Name = "terraform-web"
+    Name = "terraform-web-pr"
   }
 }
 
